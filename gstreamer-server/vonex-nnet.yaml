@@ -1,0 +1,66 @@
+#
+# This is the configuration for gstreamer-server for the Vonex nnet model
+# Please note that we are still fine tuning this model.
+# See [nnet trainer](https://deploy.vonex.internal/nnet/) for the latest models.
+#
+# Note: there are ansible playbooks inside Ansible Tower to deploy new servers.
+# Use these, if required.
+#
+# Note2: Please ensure that the patched gstreamer and kaldi-gstreamer RPMs
+# are installed from the repositories over at deploy.vonex.internal, otherwise,
+# the model will fail to load correctly.
+#
+# SingleUtteranceNnet2Decoder can be retreived from https://stash.vonex.internal
+#
+use-nnet2: True
+decoder:
+    # All the properties nested here correspond to the kaldinnet2onlinedecoder GStreamer plugin properties.
+    # Use gst-inspect-1.0 ./libgstkaldionline2.so kaldinnet2onlinedecoder to discover the available properties
+    use-threaded-decoder:  true
+    model : vnx-model/english/vnx_trained_nnet_ms_sp_online/final.mdl
+    word-syms : vnx-model/english/vnx_trained_nnet_ms_sp_online/words.txt
+    fst : vnx-model/english/vnx_trained_nnet_ms_sp_online/HCLG.fst
+    mfcc-config : vnx-model/english/vnx_trained_nnet_ms_sp_online/conf/mfcc.conf
+    ivector-extraction-config : vnx-model/english/vnx_trained_nnet_ms_sp_online/conf/ivector_extractor.conf
+    max-active: 10000
+    beam: 10.0
+    lattice-beam: 6.0
+    acoustic-scale: 0.083
+    do-endpointing : true
+    endpoint-silence-phones : "1:2:3:4:5:6:7:8:9:10"
+    traceback-period-in-secs: 0.25
+    chunk-length-in-secs: 0.25
+    num-nbest: 10
+    #Additional functionality that you can play with:
+    #lm-fst:  vnx-model/english/vnx_trained_nnet_ms_sp_online/G.fst
+    #big-lm-const-arpa: vnx-model/english/vnx_trained_nnet_ms_sp_online/G.carpa
+    #phone-syms: vnx-model/english/vnx_trained_nnet_ms_sp_online/phones.txt
+    #word-boundary-file: vnx-model/english/vnx_trained_nnet_ms_sp_online/word_boundary.int
+    #do-phone-alignment: true
+out-dir: tmp
+
+use-vad: False
+silence-timeout: 10
+
+# Just a sample post-processor that appends "." to the hypothesis
+post-processor: perl -npe 'BEGIN {use IO::Handle; STDOUT->autoflush(1);} s/(.*)/\1./;'
+
+# A sample full post processor that add a confidence score to 1-best hyp and deletes other n-best hyps
+full-post-processor: ./sample_full_post_processor.py
+
+logging:
+    version : 1
+    disable_existing_loggers: False
+    formatters:
+        simpleFormater:
+            format: '%(asctime)s - %(levelname)7s: %(name)10s: %(message)s'
+            datefmt: '%Y-%m-%d %H:%M:%S'
+    handlers:
+        console:
+            class: logging.StreamHandler
+            formatter: simpleFormater
+            level: DEBUG
+    root:
+        level: DEBUG
+        handlers: [console]
+
